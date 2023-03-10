@@ -1,0 +1,162 @@
+#!/bin/bash
+
+set -eux
+
+VERBOSE=true
+
+COLLECTION_IMAGE="${COLLECTION_IMAGE:-""}"
+POD_NAME="${POD_NAME:-""}"
+
+INTERVAL="${INTERVAL:-10}"
+DURATION="${DURATION:-300}"
+NODE_SELECTOR="${NODE_SELECTOR:-"{\"node-role.kubernetes.io/worker\":\"\"}"}"
+EXTRACT_TIMEOUT="$((DURATION + 60))s" # Give an extra minute for extraction to finish after collection.
+
+RESOURCE_DIR="${RESOURCE_DIR:-"/resources"}"
+BASE_COLLECTION_PATH="${BASE_COLLECTION_PATH:-must-gather""}"
+DATA_DIR="${BASE_COLLECTION_PATH}/gather-network-metrics"
+
+# verbose can be enabled or disabled on demand.
+verbose () {
+  [[ "${VERBOSE}" ]] && echo "$@" >&2
+}
+
+# wait_for will wait for the DaemonSet rollout to finish, up to a maximum time of EXTRACT_TIMEOUT.
+wait_for() {
+  local daemonset_name="${1}"
+  kubectl rollout status ds "${daemonset_name}" --timeout="${EXTRACT_TIMEOUT}"
+}
+
+# get_collection_image will retrieve the image from the first container of the provided pod. This should be the
+# name of the current must-gather pod. Thus, the must-gather and the metrics collector pod both run with the same image.
+get_collection_image() {
+    local pod_name
+    pod_name="${1:-}"
+
+    verbose "Getting collection image from pod '${pod_name}'"
+
+    kubectl get pods "${pod_name}" -o jsonpath='{.spec.containers[0].image}'
+}
+
+# save_collector_logs gets the logs of all containers of all data collectors and stores them in the must-gather.
+save_collector_logs() {
+    local daemonset_label="${1}"
+
+    pushd "${DATA_DIR}"
+    for pod in $(kubectl get pods -o name -l "${daemonset_label}"); do
+        verbose "Saving logs from pod '${pod}'"
+        kubectl logs --all-containers "${pod}" > "${pod/pod\//}.log"
+    done
+    popd
+}
+
+# save_data copies all collected data from the collectors to the must-gather pod.
+save_data() {
+    local daemonset_label="${1}"
+
+    pushd "${DATA_DIR}"
+    for pod in $(kubectl get pods -o name -l "${daemonset_label}"); do
+        verbose "Copying data from pod '${pod}'"
+        mkdir -p "${pod}"
+        kubectl cp -c sleep-infinity "${pod/pod\//}:/data-store" "${pod}"
+    done
+    popd
+}
+
+# set_daemonset_image modifies the kustomization.yaml and specifies a new image to use for the collector pods.
+set_daemonset_image() {
+    local image="${1}"
+
+    verbose "Setting IMAGE='${image}'"
+
+    sed -i "s#^  newName:.*#  newName: ${image}#" "${RESOURCE_DIR}/kustomization.yaml"
+}
+
+# set_daemonset_environment_variables sets INTERVAL and DURATION in patch-env.json (which in turn is added to the
+# DaemonSet's pods' environment).
+set_daemonset_environment_variables() {
+    local interval="${1}"
+    local duration="${2}"
+    local tmp_file
+    tmp_file=$(mktemp)
+
+    verbose "Setting INTERVAL='${interval}', DURATION='${duration}' in patch-env.json"
+
+    jq '(.spec.template.spec.initContainers[] | select(.name == "network-metrics") | .env[] | select(.name == "INTERVAL") | .value) |= "'"${interval}"'"' \
+        "${RESOURCE_DIR}/patch-env.json" > "${tmp_file}"
+    cp "${tmp_file}" "${RESOURCE_DIR}/patch-env.json"
+    jq '(.spec.template.spec.initContainers[] | select(.name == "network-metrics") | .env[] | select(.name == "DURATION") | .value) |= "'"${duration}"'"' \
+        "${RESOURCE_DIR}/patch-env.json" > "${tmp_file}"
+    cp "${tmp_file}" "${RESOURCE_DIR}/patch-env.json"
+
+    verbose "New environment file is: $(cat "${RESOURCE_DIR}"/patch-env.json)"
+}
+
+# set_daemonset_node_selector sets .spec.template.spec.nodeSelector.
+set_daemonset_node_selector() {
+    local node_selector="${1}"
+
+    if ! echo "${node_selector}" | jq; then
+        echo "Invalid node selector: '${node_selector}'. Exiting script." >&2
+        exit 1
+    fi
+
+    local tmp_file
+    tmp_file=$(mktemp)
+    jq ".spec.template.spec.nodeSelector = ${node_selector}" "${RESOURCE_DIR}/patch-selector.json" > "${tmp_file}"
+    cp "${tmp_file}" "${RESOURCE_DIR}/patch-selector.json"
+
+    verbose "New node selector is: $(cat "${RESOURCE_DIR}/patch-selector.json")"
+}
+
+# run_daemonset applies the DS inside the current namespace.
+run_daemonset() {
+    pushd "${RESOURCE_DIR}"
+    kubectl apply -k .
+    popd
+}
+
+# delete_daemonset deletes the DS from the current namespace.
+delete_daemonset() {
+    pushd "${RESOURCE_DIR}"
+    kubectl delete -k .
+    popd
+}
+
+# collect_data modifies the kustomization data, spawns the DaemonSet and waits for the DaemonSet's init containers
+# (= data collectores) to finish. In case of success, it saves both the logs and data, then it deletes the DaemonSet.
+# Otherwise, it only saves the collector logs and then deletes the DaemonSet.
+collect_data() {
+    local daemonset_name="${1}"
+    local daemonset_label="${2}"
+    local image="${3}"
+    local interval="${4}"
+    local duration="${5}"
+    local node_selector="${6}"
+
+    verbose  "Spawning daemonset: '${daemonset_name}', daemonset_label: '${daemonset_label}'"
+    set_daemonset_image "${image}"
+    set_daemonset_environment_variables "${interval}" "$duration"
+    set_daemonset_node_selector "${node_selector}"
+    run_daemonset
+
+    if wait_for "${daemonset_name}"; then
+        verbose  "Data collection succeeded"
+        save_collector_logs "${daemonset_label}"
+        save_data "${daemonset_label}"
+        kubectl delete ds "${daemonset_name}"
+    else
+        verbose  "Data timed out or failed"
+        save_collector_logs "${daemonset_label}"
+        kubectl delete ds "${daemonset_name}"
+    fi
+}
+
+mkdir -p "${DATA_DIR}"
+image="${COLLECTION_IMAGE}"
+if [ "${image}" == "" ]; then
+  image=$(get_collection_image "${POD_NAME}")
+fi
+daemonset_name=network-metrics
+daemonset_label="app=network-metrics"
+collect_data "${daemonset_name}" "${daemonset_label}" "${image}" "${INTERVAL}" "${DURATION}" "${NODE_SELECTOR}"

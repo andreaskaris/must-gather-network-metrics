@@ -1,0 +1,16 @@
+{
+  "apiVersion": "apps/v1",
+  "kind": "DaemonSet",
+  "metadata": {
+    "name": "network-metrics"
+  },
+  "spec": {
+    "template": {
+      "spec": {
+        "nodeSelector": {
+          "node-role.kubernetes.io/worker": ""
+        }
+      }
+    }
+  }
+}

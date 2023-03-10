@@ -1,0 +1,28 @@
+{
+  "apiVersion": "apps/v1",
+  "kind": "DaemonSet",
+  "metadata": {
+    "name": "network-metrics"
+  },
+  "spec": {
+    "template": {
+      "spec": {
+        "initContainers": [
+          {
+            "name": "network-metrics",
+            "env": [
+              {
+                "name": "INTERVAL",
+                "value": "10"
+              },
+              {
+                "name": "DURATION",
+                "value": "600"
+              }
+            ]
+          }
+        ]
+      }
+    }
+  }
+}

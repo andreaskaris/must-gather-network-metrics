@@ -1,0 +1,53 @@
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: network-metrics
+  labels:
+    app: network-metrics
+spec:
+  selector:
+    matchLabels:
+      app: network-metrics
+  template:
+    metadata:
+      labels:
+        app: network-metrics
+    spec:
+      tolerations:     
+      - operator: "Exists"
+      hostPID: true
+      hostIPC: true
+      hostNetwork: true
+      containers:
+      - command:
+        - sleep
+        - infinity
+        name: sleep-infinity
+        image: network-metrics
+        volumeMounts:
+        - mountPath: /data-store
+          name: data-store
+      initContainers:
+      - name: network-metrics
+        image: network-metrics
+        command:
+          - "/bin/bash"
+          - "/entrypoint/entrypoint.sh"
+        imagePullPolicy: IfNotPresent
+        volumeMounts:
+        - name: metrics-scripts
+          mountPath: /entrypoint
+        - name: data-store
+          mountPath: /data-store
+        securityContext:
+          runAsUser: 0
+          runAsGroup: 0
+          privileged: true
+      volumes:
+      - name: metrics-scripts
+        configMap:
+          name: metrics-scripts
+      - emptyDir:
+          sizeLimit: 10Gi
+        name: data-store

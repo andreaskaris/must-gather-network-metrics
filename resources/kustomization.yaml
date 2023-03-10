@@ -1,0 +1,17 @@
+resources:
+- daemonset.yaml
+
+patches:
+- path: patch-selector.json
+- path: patch-env.json
+
+configMapGenerator:
+- name: metrics-scripts
+  files:
+  - collect-metrics.sh
+  - monitor.sh
+  - entrypoint.sh
+
+images:
+- name: network-metrics
+  newName: quay.io/akaris/network-metrics-collector:latest
