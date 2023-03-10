@@ -1,4 +1,4 @@
-IMAGE ?= "quay.io/akaris/network-metrics-collector"
+IMAGE ?= "quay.io/akaris/must-gather-network-metrics:v0.1"
 
 .PHONY: build-container
 build-container: ## Build the container image, customize with IMAGE="".
@@ -22,8 +22,8 @@ help:
 ###################################################
 .PHONY: deploy-network-metrics
 deploy-network-metrics:
-	kubectl apply -k resources/network-metrics/
+	kubectl apply -k resources/
 
 .PHONY: undeploy-network-metrics
 undeploy-network-metrics:
-	kubectl delete -k resources/network-metrics/
+	kubectl delete -k resources/

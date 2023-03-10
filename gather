@@ -10,7 +10,7 @@ POD_NAME="${POD_NAME:-""}"
 INTERVAL="${INTERVAL:-10}"
 DURATION="${DURATION:-300}"
 NODE_SELECTOR="${NODE_SELECTOR:-"{\"node-role.kubernetes.io/worker\":\"\"}"}"
-EXTRACT_TIMEOUT="$((DURATION + 60))s" # Give an extra minute for extraction to finish after collection.
+EXTRACT_TIMEOUT="$((DURATION + 240))s" # Give an extra 4 minutes for extraction to finish after collection.
 
 RESOURCE_DIR="${RESOURCE_DIR:-"/resources"}"
 BASE_COLLECTION_PATH="${BASE_COLLECTION_PATH:-must-gather""}"
@@ -45,7 +45,7 @@ save_collector_logs() {
     pushd "${DATA_DIR}"
     for pod in $(kubectl get pods -o name -l "${daemonset_label}"); do
         verbose "Saving logs from pod '${pod}'"
-        kubectl logs --all-containers "${pod}" > "${pod/pod\//}.log"
+        kubectl logs -c network-metrics "${pod}" > "${pod/pod\//}.log"
     done
     popd
 }
@@ -53,12 +53,13 @@ save_collector_logs() {
 # save_data copies all collected data from the collectors to the must-gather pod.
 save_data() {
     local daemonset_label="${1}"
+    local container_name="${2}"
 
     pushd "${DATA_DIR}"
     for pod in $(kubectl get pods -o name -l "${daemonset_label}"); do
         verbose "Copying data from pod '${pod}'"
         mkdir -p "${pod}"
-        kubectl cp -c sleep-infinity "${pod/pod\//}:/data-store" "${pod}"
+        kubectl cp -c "${container_name}" "${pod/pod\//}:/data-store" "${pod}"
     done
     popd
 }
@@ -124,8 +125,10 @@ delete_daemonset() {
 }
 
 # collect_data modifies the kustomization data, spawns the DaemonSet and waits for the DaemonSet's init containers
-# (= data collectores) to finish. In case of success, it saves both the logs and data, then it deletes the DaemonSet.
-# Otherwise, it only saves the collector logs and then deletes the DaemonSet.
+# (= data collectores) to finish. It saves both the logs and data, then it deletes the DaemonSet.
+# The only thing that distinguishes a successful run from a failed run is the success / WARNING message. The reason
+# for this is that even if the scripts time out, etc., we want to capture all the data that we gathered up to this
+# point.
 collect_data() {
     local daemonset_name="${1}"
     local daemonset_label="${2}"
@@ -143,11 +146,12 @@ collect_data() {
     if wait_for "${daemonset_name}"; then
         verbose  "Data collection succeeded"
         save_collector_logs "${daemonset_label}"
-        save_data "${daemonset_label}"
+        save_data "${daemonset_label}" "sleep-infinity"
         kubectl delete ds "${daemonset_name}"
     else
-        verbose  "Data timed out or failed"
+        verbose  "WARNING: Data timed out or failed"
         save_collector_logs "${daemonset_label}"
+        save_data "${daemonset_label}" "network-metrics"
         kubectl delete ds "${daemonset_name}"
     fi
 }

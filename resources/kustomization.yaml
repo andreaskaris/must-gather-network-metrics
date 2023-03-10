@@ -14,4 +14,4 @@ configMapGenerator:
 
 images:
 - name: network-metrics
-  newName: quay.io/akaris/network-metrics-collector:latest
+  newName: quay.io/akaris/must-gather-network-metrics:latest

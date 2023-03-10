@@ -25,6 +25,7 @@ spec:
         - infinity
         name: sleep-infinity
         image: network-metrics
+        imagePullPolicy: IfNotPresent
         volumeMounts:
         - mountPath: /data-store
           name: data-store
