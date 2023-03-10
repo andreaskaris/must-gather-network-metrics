@@ -25,6 +25,8 @@ bash -c "while true ; do date ; cat /proc/interrupts; sleep ${INTERVAL}; done" >
 INTERRUPTS=$!
 iotop -Pobt > "${DATA_STORE_NETWORK_METRICS}/iotop.txt" &
 IOTOP=$!
+bash -c "while true ; do date ; conntrack -L -n ; sleep 5; done" > "${DATA_STORE_NETWORK_METRICS}/conntrack.txt" &
+CONNTRACK=$!
 echo "Metrics gathering started. Please wait for completion..."
 sleep "${DURATION}"
 kill $PIDSTAT
@@ -34,5 +36,6 @@ kill $FREE
 kill $SOFTIRQS
 kill $INTERRUPTS
 kill $IOTOP
+kill $CONNTRACK
 sync
 echo "Done with metrics collection."
