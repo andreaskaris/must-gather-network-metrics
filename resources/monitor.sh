@@ -221,7 +221,16 @@ while [ "$ITERATIONS" != 0 ]; do
     echo "===== $(date +"%F %T.%N%:z (%Z)") =====" >> "$HOSTNAME-network_stats_$now/netdev"
     cat /proc/net/dev >> "$HOSTNAME-network_stats_$now/netdev"
     for DEV in $(ip a l | grep mtu | awk '{print $2}' | awk -F "[:@]" '{print $1}'); do echo "===== $(date +"%F %T.%N%:z (%Z)") =====" >> "$HOSTNAME-network_stats_$now/ethtool_$DEV"; ethtool -S "$DEV" >> "$HOSTNAME-network_stats_$now/ethtool_$DEV" 2>/dev/null; done
-    for DEV in $(ip a l | grep mtu | awk '{print $2}' | awk -F "[:@]" '{print $1}'); do echo "===== $(date +"%F %T.%N%:z (%Z)") =====" >> "$HOSTNAME-network_stats_$now/sys_statistics_$DEV"; find /sys/devices/ -type f | grep "/net/$DEV/statistics" | xargs grep . | awk -F "/" '{print $NF}' >> "$HOSTNAME-network_stats_$now/sys_statistics_$DEV"; done
+    # hack diverging from https://access.redhat.com/articles/1311173
+    # for DEV in $(ip a l | grep mtu | awk '{print $2}' | awk -F "[:@]" '{print $1}'); do echo "===== $(date +"%F %T.%N%:z (%Z)") =====" >> "$HOSTNAME-network_stats_$now/sys_statistics_$DEV"; find /sys/devices/ -type f | grep "/net/$DEV/statistics" | xargs grep . | awk -F "/" '{print $NF}' >> "$HOSTNAME-network_stats_$now/sys_statistics_$DEV"; done
+    tmp_file=$(mktemp)
+    find /sys/devices -type f | grep -E '/net/.*/statistics' | xargs grep . > "${tmp_file}"
+    for DEV in $(ip a l | grep mtu | awk '{print $2}' | awk -F "[:@]" '{print $1}'); do
+        echo "===== $(date +"%F %T.%N%:z (%Z)") =====" >> "$HOSTNAME-network_stats_$now/sys_statistics_$DEV"
+        awk -F "/" "/${DEV}/ {print \$NF}" >> "$HOSTNAME-network_stats_$now/sys_statistics_$DEV" < "${tmp_file}"
+    done
+    rm -f "${tmp_file}"
+    # endhack
     if [ -e /proc/net/sctp ]; then
         echo "===== $(date +"%F %T.%N%:z (%Z)") =====" >> "$HOSTNAME-network_stats_$now/sctp-assocs"
         cat /proc/net/sctp/assocs >> "$HOSTNAME-network_stats_$now/sctp-assocs"
