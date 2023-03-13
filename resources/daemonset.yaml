@@ -37,6 +37,8 @@ spec:
           - "/entrypoint/entrypoint.sh"
         imagePullPolicy: IfNotPresent
         volumeMounts:
+        - mountPath: /host                                                                                                  
+          name: host 
         - name: metrics-scripts
           mountPath: /entrypoint
         - name: data-store
@@ -46,6 +48,10 @@ spec:
           runAsGroup: 0
           privileged: true
       volumes:
+      - hostPath:
+          path: /
+          type: Directory
+        name: host
       - name: metrics-scripts
         configMap:
           name: metrics-scripts
