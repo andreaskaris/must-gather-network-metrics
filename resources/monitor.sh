@@ -239,6 +239,8 @@ while [ "$ITERATIONS" != 0 ]; do
         # hack diverging from https://access.redhat.com/articles/1311173
         cat /proc/net/snmp >> "$HOSTNAME-network_stats_$now/net-snmp"
         cat /proc/net/snmp6 >> "$HOSTNAME-network_stats_$now/net-snmp6"
+        cat /proc/net/raw >> "$HOSTNAME-network_stats_$now/net-raw"
+        cat /proc/net/raw6 >> "$HOSTNAME-network_stats_$now/net-raw6"
         # end hack
     fi
     if [ "$ITERATIONS" -gt 0 ]; then let ITERATIONS-=1; fi
