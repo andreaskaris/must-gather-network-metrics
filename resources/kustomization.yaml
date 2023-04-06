@@ -10,6 +10,7 @@ configMapGenerator:
   files:
   - collect-metrics.sh
   - collect-cpu-metrics.sh
+  - collect-container-metrics.sh
   - monitor.sh
   - entrypoint.sh
 

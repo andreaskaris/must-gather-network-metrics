@@ -14,7 +14,7 @@ spec:
       labels:
         app: network-metrics
     spec:
-      tolerations:     
+      tolerations:
       - operator: "Exists"
       hostPID: true
       hostIPC: true
@@ -37,8 +37,10 @@ spec:
           - "/entrypoint/entrypoint.sh"
         imagePullPolicy: IfNotPresent
         volumeMounts:
-        - mountPath: /host                                                                                                  
-          name: host 
+        - mountPath: /host
+          name: host
+        - mountPath: /run/netns
+          name: run-netns
         - name: metrics-scripts
           mountPath: /entrypoint
         - name: data-store
@@ -52,6 +54,10 @@ spec:
           path: /
           type: Directory
         name: host
+      - hostPath:
+          path: /run/netns
+          type: Directory
+        name: run-netns
       - name: metrics-scripts
         configMap:
           name: metrics-scripts

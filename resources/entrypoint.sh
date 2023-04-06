@@ -24,6 +24,10 @@ pid2=$!
 bash "${DIR}"/collect-cpu-metrics.sh 2>&1 | sed -u -e 's/^/collect-cpu-metrics.sh: /;' &
 pid3=$!
 
+bash "${DIR}"/collect-container-metrics.sh 2>&1 | sed -u -e 's/^/collect-container-metrics.sh: /;' &
+pid4=$!
+
 wait ${pid1}
 wait ${pid2}
 wait ${pid3}
+wait ${pid4}
