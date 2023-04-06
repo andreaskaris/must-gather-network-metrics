@@ -7,7 +7,7 @@ ITERATIONS=${ITERATIONS:-120}
 DURATION=${DURATION:-600}
 DATA_STORE=${DATA_STORE:-"/data-store/cpu-metrics"}
 NOW=$(date +%Y_%m_%d_%H)
-DATA_STORE_CPU_METRICS="${HOSTNAME}-cpu_metrics_${NOW}"
+DATA_STORE_CPU_METRICS="${DATA_STORE}/${HOSTNAME}-cpu_metrics_${NOW}"
 
 echo "Gathering CPU metrics ..."
 

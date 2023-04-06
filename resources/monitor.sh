@@ -236,6 +236,10 @@ while [ "$ITERATIONS" != 0 ]; do
         cat /proc/net/sctp/assocs >> "$HOSTNAME-network_stats_$now/sctp-assocs"
         echo "===== $(date +"%F %T.%N%:z (%Z)") =====" >> "$HOSTNAME-network_stats_$now/sctp-snmp"
         cat /proc/net/sctp/snmp >> "$HOSTNAME-network_stats_$now/sctp-snmp"
+        # hack diverging from https://access.redhat.com/articles/1311173
+        cat /proc/net/snmp >> "$HOSTNAME-network_stats_$now/net-snmp"
+        cat /proc/net/snmp6 >> "$HOSTNAME-network_stats_$now/net-snmp6"
+        # end hack
     fi
     if [ "$ITERATIONS" -gt 0 ]; then let ITERATIONS-=1; fi
     # Wait till background jobs are finished
