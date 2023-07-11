@@ -16,7 +16,7 @@ DaemonSet pods, the must-gather image will collect the collected data from all p
 To run with the defaults (300 seconds, leave 240 seconds more for monitor.sh to complete, sample every 10 seconds, 
 all worker nodes), run the following command:
 ~~~
-export IMAGE=quay.io/akaris/must-gather-network-metrics:v0.5; oc adm must-gather --image=${IMAGE} -- gather
+export IMAGE=quay.io/akaris/must-gather-network-metrics:v0.6; oc adm must-gather --image=${IMAGE} -- gather
 ~~~
 
 Or, as a shortcut (only if you checked out this repository):
@@ -28,7 +28,7 @@ make must-gather
 
 In order to customize the interval and duration of data collection, set:
 ~~~
-export IMAGE=quay.io/akaris/must-gather-network-metrics:v0.5; oc adm must-gather --image=${IMAGE} -- \
+export IMAGE=quay.io/akaris/must-gather-network-metrics:v0.6; oc adm must-gather --image=${IMAGE} -- \
   "export DURATION=30; export INTERVAL=5; gather"
 ~~~
 > NOTE: All values are in seconds.
@@ -46,7 +46,7 @@ If you need to run for more than 5 minutes, you must specify another timeout par
 sets a must-gather timeout of 20 minutes, and tells the collector scripts to run for 15 minutes. This should leave
 enough headroom to avoid that the script is canceled:
 ~~~
-export IMAGE=quay.io/akaris/must-gather-network-metrics:v0.5; oc adm must-gather --timeout='20m' --image=${IMAGE} -- \
+export IMAGE=quay.io/akaris/must-gather-network-metrics:v0.6; oc adm must-gather --timeout='20m' --image=${IMAGE} -- \
   "export DURATION=900; export INTERVAL=5; gather"
 ~~~
 
@@ -55,6 +55,6 @@ export IMAGE=quay.io/akaris/must-gather-network-metrics:v0.5; oc adm must-gather
 By default, collection will run on all worker nodes. If you need to specify a different node selector label for data
 collection, use the following command:
 ~~~
-export IMAGE=quay.io/akaris/must-gather-network-metrics:v0.5; oc adm must-gather --timeout='20m' --image=${IMAGE} -- \
+export IMAGE=quay.io/akaris/must-gather-network-metrics:v0.6; oc adm must-gather --timeout='20m' --image=${IMAGE} -- \
   'export NODE_SELECTOR="{\"node-role.kubernetes.io/master\":\"\"}"; export DURATION=30; export INTERVAL=5; gather'
 ~~~

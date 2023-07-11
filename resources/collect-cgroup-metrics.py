@@ -64,9 +64,9 @@ def collect_cgroup_info():
 
     # iterate over all containers
     for cinfo in container_info["containers"]:
-        # get all the ids that we need
-        cid = cinfo["id"]
-        pid = cinfo["labels"]["io.kubernetes.pod.uid"]
+        # get all the ids that we need. Note that in file names, "-" is replaced with "_"
+        cid = cinfo["id"].replace("-", "_")
+        pid = cinfo["labels"]["io.kubernetes.pod.uid"].replace("-", "_")
 
         # build a combined name for the output directory
         container_name = cinfo["metadata"]["name"]

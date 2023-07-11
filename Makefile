@@ -1,4 +1,4 @@
-IMAGE ?= "quay.io/akaris/must-gather-network-metrics:v0.5"
+IMAGE ?= "quay.io/akaris/must-gather-network-metrics:v0.6"
 
 .PHONY: build-container
 build-container: ## Build the container image, customize with IMAGE="".
